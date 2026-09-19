@@ -3,16 +3,18 @@ import json
 
 import pandas as pd
 from dotenv import load_dotenv
-from google import genai 
+from google import genai
 
 from app.services.profiler import profile_dataset
-from app.services.trends import analyze_trend
-from app.services.comparisons import compare_groups
-from app.services.anomalies import detect_anomalies
 from app.services.statistics import (
-    calculate_correlation,
-    get_top_values
+    get_top_values,
+    calculate_correlation
 )
+
+from app.services.comparisons import compare_groups
+from app.services.trends import analyze_trend
+from app.services.anomalies import detect_anomalies
+
 
 load_dotenv()
 
@@ -20,32 +22,49 @@ api_key = os.getenv("GEMINI_API_KEY")
 
 client = genai.Client(api_key=api_key)
 
+
+# --------------------------------------------------
 # Validation helpers
+# --------------------------------------------------
+
 def validate_column(df, column):
     if column not in df.columns:
         raise ValueError(
             f"Column '{column}' does not exist in the dataset."
         )
 
-def validate_numeric_column(df, column):
 
+def validate_numeric_column(df, column):
     validate_column(df, column)
+
     if not pd.api.types.is_numeric_dtype(df[column]):
         raise ValueError(
-            f"Column '{column}' must be numeric"
+            f"Column '{column}' must be numeric."
         )
 
+
+# --------------------------------------------------
 # Gemini investigation
+# --------------------------------------------------
 
 def ask_gemini(prompt: str, df):
+
     investigation_steps = []
 
+    # --------------------------------------------------
+    # Gemini tools
+    # --------------------------------------------------
+
     tools = [
+
         {
             "type": "function",
             "name": "profile_dataset",
             "description": (
-                "Get an overview of the CSV dataset including row count, column count, numeric columns, date columns, categorical columns, missing values, unique counts, and column types."
+                "Get an overview of the CSV dataset including "
+                "row count, column count, numeric columns, date columns, "
+                "categorical columns, missing values, unique counts, "
+                "and column types."
             ),
             "parameters": {
                 "type": "object",
@@ -57,7 +76,9 @@ def ask_gemini(prompt: str, df):
             "type": "function",
             "name": "get_top_values",
             "description": (
-                "Find the most frequent values in a column. Useful for understanding the most common categories or values in a dataset"
+                "Find the most frequent values in a column. "
+                "Useful for understanding the most common categories "
+                "or values in a dataset."
             ),
             "parameters": {
                 "type": "object",
@@ -71,7 +92,7 @@ def ask_gemini(prompt: str, df):
                         "description": (
                             "Maximum number of top values to return."
                         )
-                    },
+                    }
                 },
                 "required": ["column"]
             }
@@ -81,7 +102,8 @@ def ask_gemini(prompt: str, df):
             "type": "function",
             "name": "compare_groups",
             "description": (
-                "Compare the total value of a numeric column across different groups in another column."
+                "Compare the total value of a numeric column across "
+                "different groups in another column."
             ),
             "parameters": {
                 "type": "object",
@@ -89,13 +111,15 @@ def ask_gemini(prompt: str, df):
                     "value_column": {
                         "type": "string",
                         "description": (
-                            "The numeric column whose values should be summed."
+                            "The numeric column whose values "
+                            "should be summed."
                         )
                     },
                     "group_column": {
                         "type": "string",
                         "description": (
-                            "The column containing the groups to compare."
+                            "The column containing the groups "
+                            "to compare."
                         )
                     }
                 },
@@ -110,7 +134,8 @@ def ask_gemini(prompt: str, df):
             "type": "function",
             "name": "analyze_trend",
             "description": (
-                "Analyze how a numeric value changes over time using a date column"
+                "Analyze how a numeric value changes over time "
+                "using a date column."
             ),
             "parameters": {
                 "type": "object",
@@ -139,7 +164,8 @@ def ask_gemini(prompt: str, df):
             "type": "function",
             "name": "detect_anomalies",
             "description": (
-                "Detect unusual values in a numeric column using the IQR anomaly detection method."
+                "Detect unusual values in a numeric column using "
+                "the IQR anomaly detection method."
             ),
             "parameters": {
                 "type": "object",
@@ -147,36 +173,32 @@ def ask_gemini(prompt: str, df):
                     "column": {
                         "type": "string",
                         "description": (
-                            "The numeric column to check for anomalies."
+                            "The numeric column to check "
+                            "for anomalies."
                         )
                     }
                 },
-                "required": [
-                    "column"
-                ]
+                "required": ["column"]
             }
         },
-        
+
         {
             "type": "function",
             "name": "calculate_correlation",
             "description": (
-                "Calculate the Pearson correlation between two numeric columns."
+                "Calculate the Pearson correlation between "
+                "two numeric columns."
             ),
             "parameters": {
                 "type": "object",
                 "properties": {
                     "column_a": {
                         "type": "string",
-                        "description": (
-                            "First numeric column."
-                        )
+                        "description": "First numeric column."
                     },
                     "column_b": {
                         "type": "string",
-                        "description": (
-                            "Second numeric column."
-                        )
+                        "description": "Second numeric column."
                     }
                 },
                 "required": [
@@ -187,7 +209,9 @@ def ask_gemini(prompt: str, df):
         }
     ]
 
-    # System Prompt
+    # --------------------------------------------------
+    # System prompt
+    # --------------------------------------------------
 
     system_prompt = """
         You are a data investigation agent.
@@ -243,20 +267,24 @@ def ask_gemini(prompt: str, df):
         Every numerical finding must come from a tool result.
     """
 
+    # --------------------------------------------------
+    # Initial Gemini request
+    # --------------------------------------------------
 
-    # Initial Gemini Request
     interaction = client.interactions.create(
         model="gemini-3.1-flash-lite",
         system_instruction=system_prompt,
         input=prompt,
-        tools=tools 
+        tools=tools
     )
 
     print("STATUS:", interaction.status)
     print("STEPS:", interaction.steps)
     print("OUTPUT:", interaction.output_text)
 
-    # Tool Execution Loop
+    # --------------------------------------------------
+    # Tool execution loop
+    # --------------------------------------------------
 
     MAX_TOOL_CALLS = 8
     tool_call_count = 0
@@ -277,19 +305,24 @@ def ask_gemini(prompt: str, df):
             }
 
         for step in function_calls:
+
             tool_call_count += 1
 
             if tool_call_count > MAX_TOOL_CALLS:
                 return {
                     "answer": (
-                        "Investigation has stopped because the maximum number of tool calls was reached. "
+                        "I stopped the investigation because the maximum "
+                        "number of tool calls was reached."
                     ),
                     "investigation": investigation_steps
                 }
 
+            # --------------------------------------------------
             # Get tool arguments safely
+            # --------------------------------------------------
+
             arguments = step.arguments
-            
+
             if isinstance(arguments, str):
                 try:
                     arguments = json.loads(arguments)
@@ -299,12 +332,18 @@ def ask_gemini(prompt: str, df):
             if arguments is None:
                 arguments = {}
 
-            # exceute requested tool safely
+            # --------------------------------------------------
+            # Execute requested tool safely
+            # --------------------------------------------------
 
             try:
+
                 if step.name == "profile_dataset":
+
                     result = profile_dataset(df)
+
                 elif step.name == "get_top_values":
+
                     column = arguments.get("column")
 
                     if not column:
@@ -326,16 +365,24 @@ def ask_gemini(prompt: str, df):
                         column=column,
                         n=n
                     )
+
                 elif step.name == "compare_groups":
 
                     value_column = arguments.get("value_column")
                     group_column = arguments.get("group_column")
 
                     if not value_column:
-                        raise ValueError("A value_column is required.")
-                    
+                        raise ValueError(
+                            "A value_column is required."
+                        )
+
+                    if not group_column:
+                        raise ValueError(
+                            "A group_column is required."
+                        )
+
                     validate_numeric_column(
-                        df, 
+                        df,
                         value_column
                     )
 
@@ -344,13 +391,14 @@ def ask_gemini(prompt: str, df):
                         group_column
                     )
 
-                    result  = compare_groups(
+                    result = compare_groups(
                         df,
                         value_column=value_column,
                         group_column=group_column
                     )
-                
+
                 elif step.name == "analyze_trend":
+
                     value_column = arguments.get("value_column")
                     date_column = arguments.get("date_column")
 
@@ -375,12 +423,13 @@ def ask_gemini(prompt: str, df):
                     )
 
                     result = analyze_trend(
-                        df, 
+                        df,
                         value_column=value_column,
                         date_column=date_column
                     )
-                
+
                 elif step.name == "detect_anomalies":
+
                     column = arguments.get("column")
 
                     if not column:
@@ -399,6 +448,7 @@ def ask_gemini(prompt: str, df):
                     )
 
                 elif step.name == "calculate_correlation":
+
                     column_a = arguments.get("column_a")
                     column_b = arguments.get("column_b")
 
@@ -434,6 +484,7 @@ def ask_gemini(prompt: str, df):
                     )
 
                 else:
+
                     raise ValueError(
                         f"Unknown tool requested: {step.name}"
                     )
@@ -441,9 +492,9 @@ def ask_gemini(prompt: str, df):
                 tool_status = "completed"
 
             except ValueError as e:
+
                 # Invalid Gemini arguments should not crash
                 # the entire investigation.
-
                 result = {
                     "error": str(e)
                 }
@@ -453,10 +504,11 @@ def ask_gemini(prompt: str, df):
                 print(
                     f"TOOL VALIDATION ERROR: {step.name}: {e}"
                 )
-            
-            except Exception as e:
-                # Unexpected tool errors are also returned to Gemini instead of crashing the investigation loop.
 
+            except Exception as e:
+
+                # Unexpected tool errors are also returned to Gemini
+                # instead of crashing the investigation loop.
                 result = {
                     "error": (
                         "This tool could not be executed safely."
@@ -465,9 +517,13 @@ def ask_gemini(prompt: str, df):
 
                 tool_status = "failed"
 
-                print(f"TOOL ERROR: {step.name}: {repr(e)}")
+                print(
+                    f"TOOL ERROR: {step.name}: {repr(e)}"
+                )
 
+            # --------------------------------------------------
             # Store investigation step
+            # --------------------------------------------------
 
             investigation_steps.append({
                 "tool": step.name,
@@ -476,11 +532,13 @@ def ask_gemini(prompt: str, df):
             })
 
             print(
-                f"TOOL USED: {step.name}"
+                f"TOOL USED: {step.name} "
                 f"({tool_status})"
             )
 
+            # --------------------------------------------------
             # Send tool result back to Gemini
+            # --------------------------------------------------
 
             interaction = client.interactions.create(
                 model="gemini-3.1-flash-lite",
@@ -501,6 +559,7 @@ def ask_gemini(prompt: str, df):
                 ],
                 tools=tools
             )
+
 
 # --------------------------------------------------
 # Local testing

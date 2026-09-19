@@ -5,6 +5,7 @@ from fastapi import APIRouter, UploadFile, File, HTTPException
 
 from app.services.profiler import profile_dataset
 from app.agent.gemini_client import ask_gemini
+from app.services.charts import build_charts
 
 router = APIRouter()
 
@@ -101,9 +102,21 @@ async def investigate(file: UploadFile = File(...)):
             detail="Investigation temporarily failed. Please try again."
         )
 
-    # 7. Return result
+    # 7. Build charts
+    try:
+        charts = build_charts(result["investigation"])
+
+    except Exception as e:
+        print("CHART ERROR:", repr(e))
+
+        # Investigation itself succeeded, so don't throw away
+        # the useful AI result just because charts failed.
+        charts = []
+
+    # 8. Return result
     return {
         "profile": profile,
         "findings": result["answer"],
         "investigation": result["investigation"],
+        "charts": charts
     }

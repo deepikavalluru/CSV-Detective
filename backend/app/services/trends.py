@@ -1,14 +1,15 @@
 import pandas as pd
 
+
 def analyze_trend(
-    df: pd.DataFrame, 
+    df: pd.DataFrame,
     value_column: str,
     date_column: str
 ):
     # 1. Check that the requested columns exist
     if value_column not in df.columns:
         raise ValueError(
-            f"Columns '{value_column}' does not exist"
+            f"Column '{value_column}' does not exist"
         )
 
     if date_column not in df.columns:
@@ -32,13 +33,14 @@ def analyze_trend(
 
     # 4. Remove invalid rows
     data = data.dropna(
-        subset=[value_column, date_column]
+        subset=[date_column, value_column]
     )
 
     # 5. Check whether anything remains
     if data.empty:
         raise ValueError(
-            "This dataset doesn't contain enough structured data for trend analysis."
+            "This dataset doesn't contain enough structured data "
+            "for trend analysis."
         )
 
     # 6. Sort by date
@@ -53,6 +55,7 @@ def analyze_trend(
 
     return {
         "tool": "analyze_trend",
+        "chart_type": "line",
         "date_column": date_column,
         "value_column": value_column,
         "results": [
@@ -63,39 +66,3 @@ def analyze_trend(
             for _, row in trend.iterrows()
         ]
     }
-
-
-
-
-# Test
-
-if __name__ == "__main__":
-
-    df = pd.DataFrame({
-        "sales": [
-            100, 150, 120, 200, 150, 180, 90, 250
-        ],
-        "profit": [
-            20, 30, None, 45, 30, 35, 15, None
-        ],
-        "region": [
-            "South", "North", "South", "East", "North", "West", "South", "East"
-        ],
-        "product": [
-            "Laptop", "Mouse", "Laptop", "Keyboard", "Mouse", "Laptop", "Keyboard", "Laptop"
-        ],
-        "date": [
-            "2026-01-01",
-            "2026-01-02",
-            "2026-01-02",
-            "2026-01-04",
-            "2026-01-05",
-            "2026-01-05",
-            "2026-01-07",
-            "2026-01-08"
-        ]
-    })
-
-    trend = analyze_trend(df, "product", "date")
-
-    print(trend)

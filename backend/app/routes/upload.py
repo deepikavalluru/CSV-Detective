@@ -29,7 +29,7 @@ async def upload_csv(file: UploadFile = File(...)):
     if len(contents) > MAX_FILE_SIZE:
         raise HTTPException(
             status_code=400,
-            detail="File size must be less than 10MB"
+            detail="File size must be less than 10 MB"
         )
 
     if len(contents) == 0:
@@ -49,7 +49,7 @@ async def upload_csv(file: UploadFile = File(...)):
     try:
         df = pd.read_csv(temp_path)
     except Exception as e:
-        print("CSV READ ERROR : ", e)
+        print("CSV READ ERROR :", e)
         os.remove(temp_path)
 
         raise HTTPException(
