@@ -560,35 +560,3 @@ def ask_gemini(prompt: str, df):
                 tools=tools
             )
 
-
-# --------------------------------------------------
-# Local testing
-# --------------------------------------------------
-
-if __name__ == "__main__":
-
-    df = pd.DataFrame({
-        "sales": [100, 150, 120, 200, 150],
-        "profit": [20, 30, 25, 45, 30],
-        "region": [
-            "South",
-            "North",
-            "South",
-            "East",
-            "North"
-        ],
-        "date": [
-            "2026-01-01",
-            "2026-01-02",
-            "2026-01-03",
-            "2026-01-04",
-            "2026-01-05"
-        ]
-    })
-
-    result = ask_gemini(
-        "Which region has the highest sales?",
-        df
-    )
-
-    print(result)
