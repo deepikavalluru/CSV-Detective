@@ -93,7 +93,7 @@ def profile_dataset(df):
     # 7. Unique values
     profile["unique_counts"] = (
         df.nunique()
-        .to_dict
+        .to_dict()
     )
 
     # 8. Column -> type mapping
