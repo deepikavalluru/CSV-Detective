@@ -120,6 +120,62 @@ def calculate_correlation(
         ]
     }
 
+# Get Top Values
+
+def get_top_values(
+    df: pd.DataFrame,
+    column: str,
+    n: int = 10
+):
+    # 1. Validate column
+    if column not in df.columns:
+        raise ValueError(
+            f"Column '{column}' does not exist"
+        )
+
+    # 2. Validate limit
+    if not isinstance(n, int) or n <= 0:
+        raise ValueError(
+            "The value of 'n' must be a positive integer."
+        )
+
+    # 3. Remove missing values
+    series = df[column].dropna()
+
+    # 4. Check usable data
+    if series.empty:
+        return {
+            "tool": "get_top_values",
+            "column": column,
+            "limit": n,
+            "status": "insufficient_data",
+            "message": (
+                f"Column '{column}' contains no usable values."
+            ),
+            "results": []
+        }
+
+    # 5. Calculate top values
+    values = (
+        series
+        .value_counts()
+        .head(n)
+    )
+
+    # 6. Return results
+    return {
+        "tool": "get_top_values",
+        "column": column,
+        "limit": n,
+        "status": "completed",
+        "results": [
+            {
+                "value": str(value),
+                "count": int(count)
+            }
+            for value, count in values.items()
+        ]
+    } 
 
    # Test
 
@@ -150,7 +206,7 @@ if __name__ == "__main__":
         ]
     })
 
-    correlation = calculate_correlation(df, "sales", "profit")
+    results = get_top_values(df, "product", 3)
 
-    print(correlation)
+    print(results)
 
