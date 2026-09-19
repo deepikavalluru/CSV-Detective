@@ -35,7 +35,7 @@ def analyze_trend(
         subset=[value_column, date_column]
     )
 
-    # 5. Check whether anythin remains
+    # 5. Check whether anything remains
     if data.empty:
         raise ValueError(
             "This dataset doesn't contain enough structured data for trend analysis."
@@ -96,6 +96,6 @@ if __name__ == "__main__":
         ]
     })
 
-    trend = analyze_trend(df, "sales", "date")
+    trend = analyze_trend(df, "product", "date")
 
     print(trend)
