@@ -352,7 +352,7 @@ def ask_gemini(prompt: str, df):
                 
                 elif step.name == "analyze_trend":
                     value_column = arguments.get("value_column")
-                    group_column = arguments.get("date_column")
+                    date_column = arguments.get("date_column")
 
                     if not value_column:
                         raise ValueError(
@@ -393,7 +393,7 @@ def ask_gemini(prompt: str, df):
                         column
                     )
 
-                    result = detect_anaomalies(
+                    result = detect_anomalies(
                         df,
                         column=column
                     )
